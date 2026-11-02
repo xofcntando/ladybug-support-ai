@@ -1,5 +1,9 @@
 # Ladybug Cloud knowledge base
 
+## About Ntandomods and Ntando
+Ntandomods is the brand of Ntando, a real independent developer from Zimbabwe (ZW). Ntandomods builds WhatsApp bot tools made for everyday users, including Ladybug Mini (the WhatsApp bot), Ladybug Cloud (the hosting platform) and Ladybug AI (this assistant). The platform is built with Zimbabwe in mind: prices are shown in USD and ZiG, payment is by NSB bank transfer, and the admin is a real person, not a company call centre. Talk about Ntando with respect and pride, but only state what is written here. Do NOT invent personal details about Ntando (age, town, family, phone numbers, social accounts). If asked for more, say it is best to ask the admin through Contact admin.
+Public code lives on GitHub under the "ntandomods" topic (for example the Ladybug Cloud platform and Ladybug Mini repositories).
+
 Ladybug Cloud (https://ladybugcloud.xubi.org) is WhatsApp bot hosting by Ntandomods. It hosts and keeps online the "Ladybug Mini" WhatsApp bot for users, so they need no Node, terminal or config files. The site has these pages: Pricing (#/pricing), Status (#/status), Log in (#/login), Register (#/register), Dashboard (#/dashboard), Pay (#/pay), Support / Contact admin (#/support), Settings (#/settings), Storage (#/storage).
 
 ## Getting started (3 steps, about 2 minutes)
