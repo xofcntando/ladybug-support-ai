@@ -21,7 +21,11 @@ const TTS_ENABLED = !!(PROVIDER && PROVIDER.tts);
 const STT_MODEL = process.env.OPENAI_STT_MODEL || (PROVIDER && PROVIDER.stt) || '';
 const TTS_MODEL = process.env.OPENAI_TTS_MODEL || 'gpt-4o-mini-tts';
 const TTS_VOICE = process.env.OPENAI_TTS_VOICE || 'coral';
-let aiHealthy = !!PROVIDER;
+// Keyless default brain (works with no account). Disable with USE_KNIGHT=false.
+const KNIGHT_URL = process.env.KNIGHT_API_URL || 'https://knightbotapi.stream/api/ai/chat';
+const KNIGHT_KEY = process.env.KNIGHT_API_KEY || 'knight';
+const USE_KNIGHT = !PROVIDER && process.env.USE_KNIGHT !== 'false';
+let aiHealthy = !!PROVIDER || USE_KNIGHT;
 const ESCALATION_WEBHOOK = process.env.ESCALATION_WEBHOOK_URL || ''; // Discord/Slack-compatible
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map((s) => s.trim());
 const RATE_PER_MIN = parseInt(process.env.RATE_LIMIT_PER_MIN || '20', 10);
@@ -104,7 +108,7 @@ function cleanStyle(st) {
     emoji: !!st.emoji,
   };
 }
-const SYSTEM = (live, voice, st = cleanStyle()) => `You are "${st.name}", the intelligent assistant of Ntandomods, the intelligent assistant of Ntandomods (the brand of Ntando) and the face of Ladybug Cloud (${SITE_URL}), the WhatsApp bot hosting platform that runs the "Ladybug Mini" bot.
+const SYSTEM = (live, voice, st = cleanStyle(), kb = knowledge) => `You are "${st.name}", the intelligent assistant of Ntandomods, the intelligent assistant of Ntandomods (the brand of Ntando) and the face of Ladybug Cloud (${SITE_URL}), the WhatsApp bot hosting platform that runs the "Ladybug Mini" bot.
 
 WHO YOU ARE
 You were built in Zimbabwe by Ntando, a real developer, and you are proud of that. You understand the local context: ZiG and USD, bank transfers, Africa/Harare time, and that many users speak English, Shona or Ndebele (reply in whichever the user uses).
@@ -137,7 +141,7 @@ ${voice ? '- This is a LIVE VOICE CALL, so write exactly what you would say out 
 ${live}
 
 KNOWLEDGE BASE:
-${knowledge}`;
+${kb}`;
 
 // ---- basic mode (no AI key): short, human, spoken-style answers, never a raw document dump ----
 const INTENTS = [
@@ -251,10 +255,69 @@ function speakable(t) {
     .trim();
 }
 
+// ---------------- keyless brain (Knight API) ----------------
+// This free endpoint is a single GET with ~750 usable characters, so the prompt is built to a strict budget.
+const FACTS = [
+  { re: /ntando|ntandomods|who (made|built|created|owns)|developer|zimbabwe|about (you|us)|who are you/i, t: 'Ntandomods is the brand of Ntando, a real developer from Zimbabwe. Products: Ladybug Cloud (bot hosting), Ladybug Mini (WhatsApp bot), Ladybug AI (this assistant).' },
+  { re: /pair|link|connect|session|code|set ?up|get started|start|number|linked/i, t: 'Pairing: dashboard, create bot, enter number with country code, tap Get code (8 digits, lasts about 60s), then WhatsApp Linked devices, Link with phone number, type the code. Then press Start.' },
+  { re: /price|pricing|cost|how much|plan|unlimited|subscri|dollar|zig|cheap|auto-?claim|slot|trial|free/i, t: '7 days free. Then 20 coins a day; claim 20 free coins every 24h (cap 140). Unlimited $3/month needs no coins. Auto-claim $2/month. Extra bot slot $1/month. 100 coins cost $1.' },
+  { re: /coin|claim|balance|paus|ran out|run out/i, t: 'Hosting costs 20 coins a day. Claim 20 free coins every 24h (cap 140). If coins run out the bot pauses, nothing is deleted; claim coins and press Start.' },
+  { re: /pay|bank|nsb|transfer|proof|receipt|paid|ecocash/i, t: 'Pay by bank transfer in USD or ZiG to the NSB accounts on the Pay page, then send proof on the Pay page or message the admin. The admin confirms by hand.' },
+  { re: /referr|invite|friend|bonus/i, t: 'Referral: friend gets 20 bonus coins at signup, you get 40 when their bot is online 10 minutes. Max 10 rewards a month.' },
+  { re: /not respon|no respon|stopp|offline|not working|silent|crash|restart|logged out|error|broken|reply|replying/i, t: 'Bot silent? Check if it is paused (claim coins, press Start), read the live logs, prefix is a dot by default, check Linked devices in WhatsApp; if the device is gone, pair again.' },
+  { re: /command|feature|what can|menu|sticker|download|\.ai|prefix/i, t: 'Ladybug Mini commands: owner (.autostatus .setprefix), admin (.antilink .welcome .tagall), downloader (.play .ytmp4 .tiktok), general (.ai .sticker .translate). Default prefix is a dot.' },
+  { re: /admin|human|refund|ban|account|password|forgot|contact|support|recover/i, t: 'You cannot see accounts or approve payments. For refunds, bans or recovery, log in and use Contact admin on the website.' },
+];
+const SHORT_TONE = { friendly: 'warm', casual: 'relaxed', professional: 'polished', playful: 'witty', calm: 'calm' };
+const SHORT_LEN = { short: 'max 2 short sentences', normal: 'max 3 short sentences', detailed: 'a short paragraph' };
+let knightQ = Promise.resolve();
+function knightFetch(url) {
+  const run = async () => {
+    for (let i = 0; i < 2; i++) {
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 LadybugAI' }, signal: AbortSignal.timeout(30000) });
+      if (r.status === 429 && i === 0) { await new Promise((x) => setTimeout(x, 1800)); continue; }
+      if (!r.ok) throw new Error('knight ' + r.status);
+      return r.json();
+    }
+    throw new Error('knight rate limited');
+  };
+  const p = knightQ.then(run, run);
+  knightQ = p.catch(() => {}).then(() => new Promise((x) => setTimeout(x, 500)));
+  return p;
+}
+async function knightChat(messages, voice, st, live) {
+  const users = messages.filter((m) => m.role === 'user');
+  const q = (users[users.length - 1]?.content || '').replace(/\s+/g, ' ').slice(0, 170);
+  const prevQ = (users[users.length - 2]?.content || '').replace(/\s+/g, ' ');
+  const prevA = ([...messages].reverse().find((m, i, arr) => m.role === 'assistant' && arr.indexOf(m) > 0)?.content || '').replace(/\s+/g, ' ');
+  let facts = FACTS.filter((f) => f.re.test(q)).slice(0, 2).map((f) => f.t).join(' ');
+  if (/\b(status|online|down|working right now)\b/i.test(q)) { const m = /Platform: (\w+), bots running (\d+)\/(\d+)/.exec(live); if (m) facts = `Platform is ${m[1]} now, ${m[2]} of ${m[3]} bots running. ` + facts; }
+  if (!facts && prevQ) facts = FACTS.filter((f) => f.re.test(prevQ)).slice(0, 1).map((f) => f.t).join(' ');
+  let web = '';
+  if (!facts && /\b(search|latest|news|today|current|who is|who was|weather|what is|define|meaning|price of)\b/i.test(q)) {
+    const found = await runTool('web_search', { query: q });
+    if (found && !/^no results|^tool error/.test(found)) web = 'WEB: ' + found.split('\n\n')[0].replace(/\n/g, ' ').slice(0, 300) + ' ';
+  }
+  if (!facts && !web) facts = FACTS[0].t;
+  const header = `You are ${st.name} (Ntandomods, Zimbabwe), a ${SHORT_TONE[st.tone]}, human-sounding helper for Ladybug Cloud WhatsApp bot hosting, and a smart general assistant. Use contractions, ${SHORT_LEN[st.length]}${st.emoji ? '' : ', no emoji'}${voice ? ', spoken style' : ''}. Never invent prices.`;
+  const body = `${header}\n${web ? web : 'FACTS: ' + facts.slice(0, 300)}\n`;
+  const tail = (prevQ && prevA ? `User: ${prevQ.slice(0, 80)}\n${st.name}: ${prevA.slice(0, 90)}\n` : '') + `User: ${q}\n${st.name}:`;
+  let prompt = body + tail;
+  if (prompt.length > 760) prompt = body + `User: ${q}\n${st.name}:`;
+  if (prompt.length > 780) prompt = header + '\nFACTS: ' + facts.slice(0, Math.max(0, 780 - header.length - q.length - 40)) + `\nUser: ${q}\n${st.name}:`;
+  const url = `${KNIGHT_URL}?apikey=${encodeURIComponent(KNIGHT_KEY)}&q=${encodeURIComponent(prompt)}`;
+  const j = await knightFetch(url);
+  let text = String(j.result || j.message || j.response || '').trim().replace(/^\s*(Assistant|User)\s*:\s*/i, '');
+  text = text.replace(new RegExp('^\\s*' + st.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*:\\s*', 'i'), '').trim();
+  if (!text) throw new Error('knight empty');
+  return text;
+}
+
 const REASONING = /^(o\d|gpt-5)/.test(CHAT_MODEL);
 async function chat(messages, voice, st = cleanStyle()) {
   const live = await liveData();
   const last = [...messages].reverse().find((m) => m.role === 'user');
+  if (USE_KNIGHT) return knightChat(messages, voice, st, live);
   if (!OPENAI_KEY) return fallbackAnswer(last ? last.content : '', st.name, voice);
   const convo = [{ role: REASONING ? 'developer' : 'system', content: SYSTEM(live, voice, st) }, ...messages];
   for (let step = 0; step < 5; step++) {
@@ -294,7 +357,7 @@ app.post('/api/chat', limiter, async (req, res) => {
     const messages = cleanMessages(req.body.messages);
     if (!messages.length) return res.status(400).json({ error: 'No messages' });
     let reply;
-    try { reply = await chat(messages, !!req.body.voice, cleanStyle(req.body.style)); aiHealthy = !!OPENAI_KEY; }
+    try { reply = await chat(messages, !!req.body.voice, cleanStyle(req.body.style)); aiHealthy = !!OPENAI_KEY || USE_KNIGHT; }
     catch (e) {
       console.error('LLM failed, using basic mode:', e.message);
       aiHealthy = false;
@@ -302,7 +365,7 @@ app.post('/api/chat', limiter, async (req, res) => {
       reply = await fallbackAnswer(last ? last.content : '', cleanStyle(req.body.style).name, !!req.body.voice);
     }
     if (req.body.voice) reply = speakable(reply);
-    res.json({ reply, mode: OPENAI_KEY && aiHealthy ? 'ai' : 'basic' });
+    res.json({ reply, mode: (OPENAI_KEY || USE_KNIGHT) && aiHealthy ? 'ai' : 'basic' });
   } catch (e) {
     console.error(e.message);
     res.status(502).json({ error: 'The assistant is unavailable right now. Please try again or contact the admin.' });
@@ -378,10 +441,10 @@ app.post('/api/escalate', limiter, async (req, res) => {
 });
 
 app.get('/api/config', (req, res) =>
-  res.json({ ai: !!OPENAI_KEY && aiHealthy, provider: PROVIDER ? PROVIDER.name : null, tts: TTS_ENABLED, stt: !!(OPENAI_KEY && STT_MODEL), site: SITE_URL, escalation: !!ESCALATION_WEBHOOK })
+  res.json({ ai: (!!OPENAI_KEY || USE_KNIGHT) && aiHealthy, provider: PROVIDER ? PROVIDER.name : USE_KNIGHT ? 'knight' : null, tts: TTS_ENABLED, stt: !!(OPENAI_KEY && STT_MODEL), site: SITE_URL, escalation: !!ESCALATION_WEBHOOK })
 );
 app.get('/healthz', (req, res) => res.send('ok'));
 
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
-app.listen(PORT, () => console.log(`Ladybug AI listening on :${PORT} | provider=${PROVIDER ? PROVIDER.name + ' ' + CHAT_MODEL : 'none (basic mode)'}`));
+app.listen(PORT, () => console.log(`Ladybug AI listening on :${PORT} | provider=${PROVIDER ? PROVIDER.name + ' ' + CHAT_MODEL : USE_KNIGHT ? 'knight (keyless)' : 'none (basic mode)'}`));
