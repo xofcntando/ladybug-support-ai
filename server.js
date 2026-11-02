@@ -138,7 +138,7 @@ const INTENTS = [
   [/(pay|payment|bank|nsb|transfer|proof|receipt|paid)/i, () => `You pay by bank transfer in dollars or ZiG. The bank details are on the Pay page once you're logged in. After paying, send your proof through the Pay page or message the admin from your dashboard. The admin confirms it by hand, so it can take a little while.`],
   [/(referral|refer|invite|friend|bonus)/i, () => `Share your referral link from the dashboard. Your friend gets twenty bonus coins when they join, and you get forty once their bot has been online for ten minutes. You can earn up to ten rewards a month.`],
   [/(not respond|no respon|stopped|offline|not working|doesn.t work|silent|crash|restart|logged out|error)/i, () => `Okay, let's check a few things. First, is the bot paused on your dashboard? If so, claim coins and hit Start. If it's running, look at the live logs and make sure you're using the right prefix, which is a dot by default. Also check that the linked device still shows up in WhatsApp. If it's gone, pair again to get a new session.`],
-  [/(admin|human|person|contact|support|refund|ban|banned|password|forgot)/i, (n, c) => `For that one you'll need the admin. Log in and open Contact admin at ${c.site}/#/support and explain what happened. I can't see or change accounts or approve payments myself.`],
+  [/(admin|human|person|contact|support|refund|ban|banned|password|forgot)/i, (n, c) => `For that one you'll need the admin. Log in and open Contact admin on the website, then explain what happened. I can't see or change accounts or approve payments myself.`],
   [/(command|feature|what can|menu|sticker|download|ai\b)/i, () => `Ladybug Mini has owner tools, group admin tools like anti link and welcome messages, downloaders for YouTube, TikTok and more, plus stickers, translate and an AI command. The default prefix is a dot, so dot menu shows everything.`],
 ];
 async function fallbackAnswer(q, name, voice) {
@@ -214,6 +214,33 @@ async function runTool(name, args) {
   return 'unknown tool';
 }
 
+// Turn written text into something a person would actually say out loud (no slashes, symbols, URLs).
+function speakable(t) {
+  return String(t)
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/https?:\/\/[^\s)]+/gi, 'the website')
+    .replace(/(^|\s)#\/[\w\/-]*/g, ' the page ')
+    .replace(/\b24\s*\/\s*7\b/g, 'twenty four seven')
+    .replace(/\$\s?(\d+(?:\.\d+)?)\s*\/\s*(month|mo)\b/gi, '$1 dollars a month')
+    .replace(/\$\s?1\b(?!\d)/g, 'one dollar').replace(/\$\s?(\d+(?:\.\d+)?)/g, '$1 dollars')
+    .replace(/(\d+)\s*\/\s*(day|d)\b/gi, '$1 a day')
+    .replace(/\/\s*(month|mo)\b/gi, ' a month')
+    .replace(/\/\s*(day|week|year)\b/gi, ' a $1')
+    .replace(/\band\/or\b/gi, 'and or')
+    .replace(/\s*(->|=>|→)\s*/g, ' to ')
+    .replace(/[`*_~#>|\\^<>{}\[\]]/g, ' ')
+    .replace(/(^|\n)\s*(?:[-•]|\d+[.)])\s+/g, '$1')
+    .replace(/&/g, ' and ')
+    .replace(/%/g, ' percent')
+    .replace(/\//g, ' ')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+    .replace(/\s*\n+\s*/g, '. ')
+    .replace(/\.\s*\./g, '.')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([.,!?])/g, '$1')
+    .trim();
+}
+
 const REASONING = /^(o\d|gpt-5)/.test(CHAT_MODEL);
 async function chat(messages, voice, st = cleanStyle()) {
   const live = await liveData();
@@ -256,7 +283,8 @@ app.post('/api/chat', limiter, async (req, res) => {
   try {
     const messages = cleanMessages(req.body.messages);
     if (!messages.length) return res.status(400).json({ error: 'No messages' });
-    const reply = await chat(messages, !!req.body.voice, cleanStyle(req.body.style));
+    let reply = await chat(messages, !!req.body.voice, cleanStyle(req.body.style));
+    if (req.body.voice) reply = speakable(reply);
     res.json({ reply, mode: OPENAI_KEY ? 'ai' : 'basic' });
   } catch (e) {
     console.error(e.message);
@@ -267,7 +295,7 @@ app.post('/api/chat', limiter, async (req, res) => {
 // Text-to-speech (OpenAI). Browser falls back to speechSynthesis when this 404s.
 app.post('/api/tts', limiter, async (req, res) => {
   if (!OPENAI_KEY) return res.status(404).json({ error: 'tts disabled' });
-  const text = String(req.body.text || '').slice(0, 1200);
+  const text = speakable(String(req.body.text || '')).slice(0, 1200);
   const VOICES = ['alloy','ash','coral','echo','fable','nova','onyx','sage','shimmer'];
   const voice = VOICES.includes(req.body.voice) ? req.body.voice : TTS_VOICE;
   const speed = Math.min(1.35, Math.max(0.7, parseFloat(req.body.speed) || 1));

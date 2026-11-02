@@ -277,7 +277,15 @@ function listen(lang, onInterim){
   if(canRecord && cfg.stt) return listenRecorder(onInterim);
   return Promise.resolve(null);
 }
+function speakable(t){
+  return String(t).replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/https?:\/\/[^\s)]+/gi,'the website').replace(/(^|\s)#\/[\w\/-]*/g,' the page ')
+   .replace(/\b24\s*\/\s*7\b/g,'twenty four seven').replace(/\$\s?(\d+(?:\.\d+)?)\s*\/\s*(month|mo)\b/gi,'$1 dollars a month').replace(/\$\s?1\b(?!\d)/g,'one dollar').replace(/\$\s?(\d+(?:\.\d+)?)/g,'$1 dollars')
+   .replace(/(\d+)\s*\/\s*(day|d)\b/gi,'$1 a day').replace(/\/\s*(month|mo)\b/gi,' a month').replace(/\/\s*(day|week|year)\b/gi,' a $1')
+   .replace(/\s*(->|=>|\u2192)\s*/g,' to ').replace(/[`*_~#>|\\^<>{}\[\]]/g,' ').replace(/&/g,' and ').replace(/%/g,' percent').replace(/\//g,' ')
+   .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,'').replace(/\s*\n+\s*/g,'. ').replace(/\s{2,}/g,' ').replace(/\s+([.,!?])/g,'$1').trim();
+}
 function speak(text, lang){
+  text = speakable(text);
   return new Promise(async (resolve)=>{
     let ended = false; const end = ()=>{ if(!ended){ended=true; cur.audio=null; cur.skip=null; resolve();} };
     cur.skip = ()=>{ try{cur.audio&&cur.audio.pause();}catch(e){} speechSynthesis.cancel(); end(); };
@@ -288,7 +296,7 @@ function speak(text, lang){
       }
     }catch(e){}
     if(!('speechSynthesis' in window)) return end();
-    const u = new SpeechSynthesisUtterance(text.replace(/[*`#]/g,'')); u.lang = lang; u.rate = S.speed; u.onend = end; u.onerror = end;
+    const u = new SpeechSynthesisUtterance(text); u.lang = lang; u.rate = S.speed; u.onend = end; u.onerror = end;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   });
 }
