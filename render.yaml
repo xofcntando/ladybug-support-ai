@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: ladybug-support-ai
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false          # you enter this in the Render dashboard
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: SITE_URL
+        value: https://ladybugcloud.xubi.org
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: ESCALATION_WEBHOOK_URL
+        sync: false          # optional Discord/Slack webhook
