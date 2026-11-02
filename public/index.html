@@ -3,78 +3,136 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ladybug Cloud Support</title>
+<title>Ntandomods | Ladybug AI</title>
+<meta name="description" content="Ntandomods: home of Ladybug Cloud WhatsApp bot hosting and Ladybug AI, an intelligent assistant you can chat with or call." />
 <link rel="icon" href="https://ladybugcloud.xubi.org/img/logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
-:root{--bg:#050a1a;--panel:#0a1330;--line:#17224a;--text:#e8eefc;--muted:#8a97bd;--blue:#2f6bff;--blue2:#5b8cff;--ok:#2ecc8f;--warn:#f5b84b;--bad:#ff5d6c}
+:root{--bg:#050a1a;--panel:#0a1330;--panel2:#0f1b3d;--line:#1a2b5a;--text:#eef3ff;--muted:#8fa4d4;--blue:#2f6bff;--blue2:#5b8dff;--ok:#3ddc97;--warn:#f0b43a;--bad:#ff5d6c}
 *{box-sizing:border-box}
-html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--text);font-family:'Instrument Sans',system-ui,sans-serif;display:flex;justify-content:center}
-.app{width:100%;max-width:760px;height:100%;display:flex;flex-direction:column}
-header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
-header img{width:38px;height:38px;border-radius:10px}
-header h1{font:700 17px 'Bricolage Grotesque',sans-serif;margin:0}
-header small{color:var(--muted);display:block;font-size:12px}
-.spacer{flex:1}
-.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:9px 14px;border-radius:12px;font:600 14px inherit;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Instrument Sans',system-ui,sans-serif;background-image:radial-gradient(ellipse at 50% -10%,rgba(47,107,255,.25),transparent 60%)}
+a{color:var(--blue2);text-decoration:none}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+nav{position:sticky;top:0;z-index:5;background:rgba(5,10,26,.8);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:18px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--text);font:800 18px 'Bricolage Grotesque',sans-serif}
+.brand img{width:34px;height:34px;border-radius:9px}
+.brand small{display:block;font:500 11px 'Instrument Sans';color:var(--muted)}
+.sp{flex:1}
+nav a.l{color:var(--muted);font-size:14px}nav a.l:hover{color:var(--text)}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:9px 14px;border-radius:12px;font:600 14px 'Instrument Sans';cursor:pointer;display:inline-flex;align-items:center;gap:8px}
 .btn:hover{border-color:var(--blue2)}
-.btn-primary{background:var(--blue);border-color:var(--blue)}
-.btn-primary:hover{background:var(--blue2)}
+.btn-primary{background:var(--blue);border-color:var(--blue)}.btn-primary:hover{background:var(--blue2)}
+.hero{text-align:center;padding:64px 0 32px}
+.kicker{display:inline-block;color:var(--blue2);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px}
+.hero h1{font:800 clamp(34px,6vw,60px)/1.05 'Bricolage Grotesque',sans-serif;margin:0 0 16px}
+.hero h1 span{background:linear-gradient(90deg,#5b8dff,#8fe3ff);-webkit-background-clip:text;color:transparent}
+.hero p{color:var(--muted);max-width:620px;margin:0 auto 24px;font-size:17px;line-height:1.55}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.app{max-width:760px;margin:24px auto 0;height:640px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.chead{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.chead img{width:36px;height:36px;border-radius:10px}
+.chead b{font:700 16px 'Bricolage Grotesque'}
+.chead small{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.spacer{flex:1}
 #log{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
 .msg{max-width:84%;padding:11px 14px;border-radius:16px;line-height:1.5;font-size:15px;white-space:pre-wrap;word-wrap:break-word}
-.msg.bot{background:var(--panel);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.bot{background:var(--panel2);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
 .msg.me{background:var(--blue);align-self:flex-end;border-bottom-right-radius:4px}
-.msg a{color:#9db9ff}
-.msg code{background:#0d1a42;padding:1px 6px;border-radius:6px;font-size:13px}
+.msg a{color:#9db9ff}.msg code{background:#0d1a42;padding:1px 6px;border-radius:6px;font-size:13px}
 .typing{color:var(--muted);font-size:14px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 10px}
 .chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:7px 12px;font-size:13px;cursor:pointer}
 .chip:hover{color:var(--text);border-color:var(--blue2)}
-form{display:flex;gap:8px;padding:12px 18px 18px;border-top:1px solid var(--line)}
-input[type=text]{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 14px;font:15px inherit;outline:none}
+form{display:flex;gap:8px;padding:12px 16px 14px;border-top:1px solid var(--line)}
+input[type=text]{flex:1;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 14px;font:15px 'Instrument Sans';outline:none}
 input[type=text]:focus{border-color:var(--blue2)}
 .icon{width:46px;justify-content:center;padding:0}
-.foot{text-align:center;color:var(--muted);font-size:12px;padding:0 18px 12px}
-.foot a{color:var(--muted)}
+.note{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 12px}.note a{color:var(--muted);text-decoration:underline}
+section.sec{padding:64px 0 8px}
+.sec h2{font:800 32px 'Bricolage Grotesque';margin:0 0 8px;text-align:center}
+.sec .sub{color:var(--muted);text-align:center;margin:0 auto 28px;max-width:560px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px}
+.card .ic{font-size:26px;margin-bottom:10px}.card h3{font:700 18px 'Bricolage Grotesque';margin:0 0 6px}.card p{color:var(--muted);margin:0 0 12px;line-height:1.5;font-size:14px}
+footer{margin-top:64px;border-top:1px solid var(--line);padding:26px 0;color:var(--muted);font-size:13px}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
 /* call overlay */
-#call{position:fixed;inset:0;background:radial-gradient(circle at 50% 35%,#0f2260,#050a1a 70%);display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;z-index:10;padding:24px;text-align:center}
+#call{position:fixed;inset:0;background:radial-gradient(circle at 50% 35%,#0f2260,#050a1a 70%);display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;z-index:20;padding:24px;text-align:center}
 #call.on{display:flex}
-.orb{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8fb0ff,var(--blue) 55%,#14307f);box-shadow:0 0 0 0 rgba(47,107,255,.5);transition:transform .15s}
-.orb.listening{animation:pulse 1.6s infinite}
-.orb.thinking{animation:spin 1.2s linear infinite;filter:hue-rotate(40deg)}
+.orb{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8fb0ff,var(--blue) 55%,#14307f)}
+.orb.listening{animation:pulse 1.6s infinite}.orb.thinking{animation:spin 1.2s linear infinite;filter:hue-rotate(40deg)}
 .orb.speaking{animation:talk .5s ease-in-out infinite alternate;background:radial-gradient(circle at 35% 30%,#b6ffe0,var(--ok) 55%,#117a52)}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(47,107,255,.55)}100%{box-shadow:0 0 0 46px rgba(47,107,255,0)}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes talk{to{transform:scale(1.12)}}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes talk{to{transform:scale(1.12)}}
 #callState{font:700 22px 'Bricolage Grotesque',sans-serif}
 #callText{color:var(--muted);max-width:520px;min-height:48px;font-size:15px;line-height:1.5}
 #callTimer{color:var(--muted);font-variant-numeric:tabular-nums}
 .hang{background:var(--bad);border-color:var(--bad);width:64px;height:64px;border-radius:50%;font-size:26px;justify-content:center;padding:0}
 .row{display:flex;gap:14px;align-items:center}
 select{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px}
-body.embed header small,body.embed .foot{display:none}
+/* embed: chat only */
+body.embed{background:var(--panel)}
+body.embed nav,body.embed .hero,body.embed section.sec,body.embed footer,body.embed .note{display:none}
+body.embed .wrap{padding:0;max-width:none}
+body.embed .app{margin:0;max-width:none;height:100vh;border:0;border-radius:0;box-shadow:none}
 </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <img src="https://ladybugcloud.xubi.org/img/logo.png" alt="" />
-    <div><h1>Ladybug Cloud Support<small>Ask Lady anything, by text or voice</small></h1></div>
-    <div class="spacer"></div>
-    <button class="btn btn-primary" id="callBtn" title="Talk to Lady by voice">&#128222; Call Lady</button>
+<nav><div class="wrap">
+  <a class="brand" href="#top"><img src="https://ladybugcloud.xubi.org/img/logo.png" alt="" /><span>Ntandomods<small>Ladybug AI</small></span></a>
+  <div class="sp"></div>
+  <a class="l" href="#chat">Ladybug AI</a>
+  <a class="l" href="#products">Products</a>
+  <a class="l" id="statusLink" href="https://ladybugcloud.xubi.org/#/status" target="_blank" rel="noopener">Status</a>
+  <a class="btn btn-primary" id="cloudLink" href="https://ladybugcloud.xubi.org" target="_blank" rel="noopener">Ladybug Cloud</a>
+</div></nav>
+
+<main id="top">
+<div class="wrap">
+  <header class="hero">
+    <span class="kicker">Ntandomods</span>
+    <h1>Meet <span>Ladybug AI</span>,<br/>the brain behind your bot.</h1>
+    <p>Ask anything, by text or by voice. Ladybug AI knows Ladybug Cloud inside out, checks live platform data, searches the web and thinks problems through with you.</p>
+    <div class="cta">
+      <button class="btn btn-primary" id="heroCall">&#128222; Call Ladybug AIbug AI</button>
+      <a class="btn" href="#chat">Chat now</a>
+    </div>
   </header>
-  <div id="log" aria-live="polite"></div>
-  <div class="chips" id="chips"></div>
-  <form id="form">
-    <button type="button" class="btn icon" id="micBtn" title="Dictate">&#127908;</button>
-    <input type="text" id="input" placeholder="Type your question..." autocomplete="off" />
-    <button class="btn btn-primary" type="submit">Send</button>
-  </form>
-  <div class="foot">AI assistant. It can't see your account. Need a human? <a id="adminLink" href="#" target="_blank" rel="noopener">Contact admin</a></div>
+
+  <div class="app" id="chat">
+    <div class="chead">
+      <img src="https://ladybugcloud.xubi.org/img/logo.png" alt="" />
+      <div><b>Ladybug AI</b><small><span class="dot"></span> online &middot; by Ntandomods</small></div>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" id="callBtn" title="Talk by voice">&#128222; Call</button>
+    </div>
+    <div id="log" aria-live="polite"></div>
+    <div class="chips" id="chips"></div>
+    <form id="form">
+      <button type="button" class="btn icon" id="micBtn" title="Dictate">&#127908;</button>
+      <input type="text" id="input" placeholder="Ask Ladybug AI anything..." autocomplete="off" />
+      <button class="btn btn-primary" type="submit">Send</button>
+    </form>
+    <div class="note">AI can make mistakes and can't see your private account. Need a human? <a id="adminLink" href="#" target="_blank" rel="noopener">Contact admin</a></div>
+  </div>
+
+  <section class="sec" id="products">
+    <h2>The Ntandomods family</h2>
+    <p class="sub">WhatsApp automation made simple, hosted for you.</p>
+    <div class="grid">
+      <div class="card"><div class="ic">&#9729;</div><h3>Ladybug Cloud</h3><p>Host your Ladybug Mini bot 24/7. Pair in the browser, 7 days free, then 20 free coins a day or $3/month.</p><a href="https://ladybugcloud.xubi.org/#/register" target="_blank" rel="noopener">Start free trial &rarr;</a></div>
+      <div class="card"><div class="ic">&#128027;</div><h3>Ladybug Mini</h3><p>The WhatsApp bot: owner and admin tools, downloaders, stickers, AI chat and more.</p><a href="https://ladybugcloud.xubi.org/#/pricing" target="_blank" rel="noopener">See pricing &rarr;</a></div>
+      <div class="card"><div class="ic">&#129504;</div><h3>Ladybug AI</h3><p>This assistant. Support, troubleshooting, ideas and research, by chat or phone-style voice call.</p><a href="#chat">Talk to it &rarr;</a></div>
+    </div>
+  </section>
 </div>
+</main>
+<footer><div class="wrap"><span>&copy; Ntandomods</span><a href="https://ladybugcloud.xubi.org" target="_blank" rel="noopener">Ladybug Cloud</a><a href="https://ladybugcloud.xubi.org/#/status" target="_blank" rel="noopener">Platform status</a><a href="https://ladybugcloud.xubi.org/#/support" target="_blank" rel="noopener">Contact admin</a></div></footer>
 
 <div id="call" role="dialog" aria-label="Voice call">
   <div class="orb" id="orb"></div>
@@ -89,7 +147,7 @@ body.embed header small,body.embed .foot{display:none}
       <option value="es-ES">Espa&ntilde;ol</option><option value="pt-PT">Portugu&ecirc;s</option>
     </select>
     <button class="btn hang" id="hangBtn" title="Hang up">&#9742;</button>
-    <button class="btn" id="skipBtn" title="Interrupt Lady">Interrupt</button>
+    <button class="btn" id="skipBtn" title="Interrupt">Interrupt</button>
   </div>
 </div>
 
@@ -203,22 +261,22 @@ async function startCall(){
   timerId = setInterval(()=>{ const s = Math.floor((Date.now()-callStart)/1000); $('#callTimer').textContent = String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); },500);
   const lang = $('#lang').value;
   setState('thinking','Connecting...','');
-  const greet = "Hi, you've reached Ladybug Cloud support. I'm Lady. How can I help you today?";
+  const greet = "Hi, you've reached Ladybug AI. I'm Ladybug AI from Ntandomods. How can I help you today?";
   history.push({role:'assistant', content:greet}); add('assistant', greet);
-  setState('speaking','Lady is speaking',greet); await speak(greet, lang);
+  setState('speaking','Ladybug AI is speaking',greet); await speak(greet, lang);
   let silent = 0;
   while(inCall){
     setState('listening','Listening...','Go ahead, I\'m listening.');
     const heard = await listen($('#lang').value, (t)=>{ $('#callText').textContent = t; });
     if(!inCall) break;
     if(heard === null){ setState('thinking','Voice unavailable',''); break; }
-    if(!heard.trim()){ if(++silent >= 4){ const bye = "I haven't heard anything, so I'll hang up now. Call again any time."; setState('speaking','Lady is speaking',bye); await speak(bye,$('#lang').value); break; } continue; }
+    if(!heard.trim()){ if(++silent >= 4){ const bye = "I haven't heard anything, so I'll hang up now. Call again any time."; setState('speaking','Ladybug AI is speaking',bye); await speak(bye,$('#lang').value); break; } continue; }
     silent = 0;
     add('user', heard); setState('thinking','Thinking...', heard);
     let reply;
     try{ reply = await ask(heard, true); }catch(e){ reply = "Sorry, I'm having trouble right now. Please try again or contact the admin."; history.pop(); }
     if(!inCall) break;
-    add('assistant', reply); setState('speaking','Lady is speaking', reply);
+    add('assistant', reply); setState('speaking','Ladybug AI is speaking', reply);
     await speak(reply, $('#lang').value);
   }
   endCall();
@@ -228,7 +286,7 @@ function endCall(){
   if(cur.stop) cur.stop(); if(cur.skip) cur.skip(); speechSynthesis.cancel();
   $('#call').classList.remove('on');
 }
-$('#callBtn').onclick = startCall;
+$('#callBtn').onclick = startCall; $('#heroCall').onclick = startCall;
 $('#hangBtn').onclick = endCall;
 $('#skipBtn').onclick = ()=>{ if(cur.skip) cur.skip(); };
 
@@ -240,10 +298,10 @@ $('#micBtn').onclick = async ()=>{
 };
 
 /* init */
-const suggestions = ['How do I link my WhatsApp number?','How much does it cost?','My bot stopped responding','How do I pay?','How do referrals work?'];
+const suggestions = ['How do I link my WhatsApp number?','How much does it cost?','My bot stopped responding','Is the platform online right now?','Help me write a bot command idea'];
 suggestions.forEach(s=>{ const c=document.createElement('button'); c.type='button'; c.className='chip'; c.textContent=s; c.onclick=()=>send(s); $('#chips').appendChild(c); });
-fetch('/api/config').then(r=>r.json()).then(c=>{ cfg=c; $('#adminLink').href = c.site + '/#/support'; }).catch(()=>{});
-add('assistant', "Hi, I'm Lady, Ladybug Cloud's support assistant. Ask me about pairing your bot, coins, pricing or payments. Tap **Call Lady** to talk by voice.");
+fetch('/api/config').then(r=>r.json()).then(c=>{ cfg=c; $('#adminLink').href = c.site + '/#/support'; $('#cloudLink').href = c.site; $('#statusLink').href = c.site + '/#/status'; }).catch(()=>{});
+add('assistant', "Hi, I'm **Ladybug AI**, the brain behind Ntandomods and Ladybug Cloud. Ask me about your bot, coins, pricing and payments, or anything else: code, ideas, research, maths. Tap **Call Ladybug AIbug AI** to talk by voice.");
 </script>
 </body>
 </html>
