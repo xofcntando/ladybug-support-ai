@@ -129,18 +129,28 @@ ${live}
 KNOWLEDGE BASE:
 ${knowledge}`;
 
-// ---- offline fallback when no API key is configured ----
-function fallbackAnswer(q) {
-  const words = q.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
-  const sections = knowledge.split(/\n(?=## )/);
-  let best = null, score = 0;
-  for (const s of sections) {
-    const low = s.toLowerCase();
-    const sc = words.reduce((a, w) => a + (low.includes(w) ? 1 : 0), 0);
-    if (sc > score) { score = sc; best = s; }
+// ---- basic mode (no AI key): short, human, spoken-style answers, never a raw document dump ----
+const INTENTS = [
+  [/^(hi|hey|hello|hie|howzit|sawubona|mhoro|makadii|good (morning|afternoon|evening))\b/i, (n) => `Hey, it's ${n} from Ntandomods. I can help with linking your number, coins, pricing or payments. What do you need?`],
+  [/(pair|link|connect|session|code|get started|set ?up|start)/i, () => `Easy. In your dashboard, create a bot, type your number with the country code and tap Get code. Then in WhatsApp open Linked devices, choose Link with phone number, and enter the eight digit code. It only lasts about a minute, so just ask for a new one if it fails.`],
+  [/(price|pricing|cost|how much|plan|unlimited|subscribe|subscription|dollar|zig|cheap)/i, () => `You get seven days free. After that, hosting costs twenty coins a day, and you can claim twenty free coins every day. Or Unlimited is three dollars a month, so you never have to claim. Auto-claim is two dollars, and an extra bot slot is one dollar.`],
+  [/(coin|claim|balance|paused|pause|ran out|run out)/i, () => `Hosting one bot costs twenty coins a day, and you can claim twenty free coins every twenty four hours from the dashboard. If your balance runs out the bot just pauses, nothing gets deleted. Claim your coins, press Start, and it's back.`],
+  [/(pay|payment|bank|nsb|transfer|proof|receipt|paid)/i, () => `You pay by bank transfer in dollars or ZiG. The bank details are on the Pay page once you're logged in. After paying, send your proof through the Pay page or message the admin from your dashboard. The admin confirms it by hand, so it can take a little while.`],
+  [/(referral|refer|invite|friend|bonus)/i, () => `Share your referral link from the dashboard. Your friend gets twenty bonus coins when they join, and you get forty once their bot has been online for ten minutes. You can earn up to ten rewards a month.`],
+  [/(not respond|no respon|stopped|offline|not working|doesn.t work|silent|crash|restart|logged out|error)/i, () => `Okay, let's check a few things. First, is the bot paused on your dashboard? If so, claim coins and hit Start. If it's running, look at the live logs and make sure you're using the right prefix, which is a dot by default. Also check that the linked device still shows up in WhatsApp. If it's gone, pair again to get a new session.`],
+  [/(admin|human|person|contact|support|refund|ban|banned|password|forgot)/i, (n, c) => `For that one you'll need the admin. Log in and open Contact admin at ${c.site}/#/support and explain what happened. I can't see or change accounts or approve payments myself.`],
+  [/(command|feature|what can|menu|sticker|download|ai\b)/i, () => `Ladybug Mini has owner tools, group admin tools like anti link and welcome messages, downloaders for YouTube, TikTok and more, plus stickers, translate and an AI command. The default prefix is a dot, so dot menu shows everything.`],
+];
+async function fallbackAnswer(q, name, voice) {
+  const c = { site: SITE_URL };
+  if (/(status|online|up right now|is the (site|platform))/i.test(q)) {
+    try {
+      const j = await (await fetch(`${SITE_URL}/api/status`, { signal: AbortSignal.timeout(4000) })).json();
+      return `Yep, the platform is ${j.ok ? 'online' : 'having some trouble'} right now, with ${j.stats.running} of ${j.stats.bots} bots running.`;
+    } catch (e) {}
   }
-  if (!best) return `I'm in basic mode right now. Please contact the admin at ${SITE_URL}/#/support.`;
-  return best.replace(/^## /, '').trim().slice(0, 900);
+  for (const [re, fn] of INTENTS) if (re.test(q)) return fn(name, c);
+  return `I'm running in basic mode right now, so I can only help with the Ladybug Cloud basics: linking your number, coins, pricing, payments and troubleshooting. Try asking about one of those, or reach the admin through Contact admin.`;
 }
 
 // ---------------- tools: gives the assistant real "access" ----------------
@@ -205,10 +215,10 @@ async function runTool(name, args) {
 }
 
 const REASONING = /^(o\d|gpt-5)/.test(CHAT_MODEL);
-async function chat(messages, voice, st) {
+async function chat(messages, voice, st = cleanStyle()) {
   const live = await liveData();
   const last = [...messages].reverse().find((m) => m.role === 'user');
-  if (!OPENAI_KEY) return fallbackAnswer(last ? last.content : '');
+  if (!OPENAI_KEY) return fallbackAnswer(last ? last.content : '', st.name, voice);
   const convo = [{ role: REASONING ? 'developer' : 'system', content: SYSTEM(live, voice, st) }, ...messages];
   for (let step = 0; step < 5; step++) {
     const body = { model: CHAT_MODEL, messages: convo, tools: TOOLS };
