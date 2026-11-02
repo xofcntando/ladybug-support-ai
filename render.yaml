@@ -8,10 +8,13 @@ services:
     healthCheckPath: /healthz
     autoDeploy: true
     envVars:
-      - key: OPENAI_API_KEY
-        sync: false          # you enter this in the Render dashboard
-      - key: OPENAI_MODEL
-        value: gpt-4o
+      # Fill in ONE of these (leave the others empty). Advanced mode turns on automatically.
+      - key: GROQ_API_KEY       # free: console.groq.com
+        sync: false
+      - key: GEMINI_API_KEY     # free: aistudio.google.com/apikey
+        sync: false
+      - key: OPENAI_API_KEY     # paid, best voice
+        sync: false
       - key: SITE_URL
         value: https://ladybugcloud.xubi.org
       - key: ALLOWED_ORIGINS

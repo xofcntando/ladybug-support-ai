@@ -23,5 +23,11 @@ OPENAI_API_KEY, OPENAI_MODEL (gpt-4o; o-series/gpt-5 reasoning models also work)
 
 Edit `knowledge.md` to change what Ladybug AI knows. Free Render plan sleeps after 15 min idle (first request is slow); use Starter ($7) for a snappy call experience.
 
-## Free AI without OpenAI
-Any OpenAI-compatible provider works. Example (Groq, free tier): OPENAI_BASE_URL=https://api.groq.com/openai/v1, OPENAI_MODEL=llama-3.3-70b-versatile, OPENAI_API_KEY=<groq key>. Voice then uses the browser's built-in speech.
+## Advanced mode (one key)
+Set ONE of these environment variables on Render. Advanced mode switches on automatically, no other settings needed:
+- `GROQ_API_KEY` (free, console.groq.com): fast Llama 3.3 70B, plus speech-to-text for non-Chrome browsers
+- `GEMINI_API_KEY` (free tier, aistudio.google.com/apikey): Gemini 2.0 Flash
+- `OPENAI_API_KEY` (paid): GPT-4o and the most natural voice
+- `OPENROUTER_API_KEY`: free Llama model
+
+The chat header shows "advanced mode" when it works, and "basic mode" if the key is missing or rejected.

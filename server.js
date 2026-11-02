@@ -6,12 +6,22 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const SITE_URL = (process.env.SITE_URL || 'https://ladybugcloud.xubi.org').replace(/\/$/, '');
-const OPENAI_KEY = process.env.OPENAI_API_KEY || '';
-const OPENAI_BASE = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
-const CHAT_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
+// ---- AI provider: set ONE of these keys on Render and advanced mode switches on ----
+const PROVIDERS = [
+  { env: 'OPENAI_API_KEY', name: 'openai', base: 'https://api.openai.com/v1', model: 'gpt-4o', stt: 'whisper-1', tts: true },
+  { env: 'GROQ_API_KEY', name: 'groq', base: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', stt: 'whisper-large-v3-turbo', tts: false },
+  { env: 'GEMINI_API_KEY', name: 'gemini', base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.0-flash', stt: null, tts: false },
+  { env: 'OPENROUTER_API_KEY', name: 'openrouter', base: 'https://openrouter.ai/api/v1', model: 'meta-llama/llama-3.3-70b-instruct:free', stt: null, tts: false },
+];
+const PROVIDER = PROVIDERS.find((p) => (process.env[p.env] || '').trim().length > 10) || null;
+const OPENAI_KEY = PROVIDER ? process.env[PROVIDER.env].trim() : '';
+const OPENAI_BASE = (process.env.OPENAI_BASE_URL || (PROVIDER && PROVIDER.base) || '').replace(/\/$/, '');
+const CHAT_MODEL = process.env.OPENAI_MODEL || (PROVIDER && PROVIDER.model) || 'gpt-4o';
+const TTS_ENABLED = !!(PROVIDER && PROVIDER.tts);
+const STT_MODEL = process.env.OPENAI_STT_MODEL || (PROVIDER && PROVIDER.stt) || '';
 const TTS_MODEL = process.env.OPENAI_TTS_MODEL || 'gpt-4o-mini-tts';
 const TTS_VOICE = process.env.OPENAI_TTS_VOICE || 'coral';
-const STT_MODEL = process.env.OPENAI_STT_MODEL || 'whisper-1';
+let aiHealthy = !!PROVIDER;
 const ESCALATION_WEBHOOK = process.env.ESCALATION_WEBHOOK_URL || ''; // Discord/Slack-compatible
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map((s) => s.trim());
 const RATE_PER_MIN = parseInt(process.env.RATE_LIMIT_PER_MIN || '20', 10);
@@ -283,9 +293,16 @@ app.post('/api/chat', limiter, async (req, res) => {
   try {
     const messages = cleanMessages(req.body.messages);
     if (!messages.length) return res.status(400).json({ error: 'No messages' });
-    let reply = await chat(messages, !!req.body.voice, cleanStyle(req.body.style));
+    let reply;
+    try { reply = await chat(messages, !!req.body.voice, cleanStyle(req.body.style)); aiHealthy = !!OPENAI_KEY; }
+    catch (e) {
+      console.error('LLM failed, using basic mode:', e.message);
+      aiHealthy = false;
+      const last = [...messages].reverse().find((m) => m.role === 'user');
+      reply = await fallbackAnswer(last ? last.content : '', cleanStyle(req.body.style).name, !!req.body.voice);
+    }
     if (req.body.voice) reply = speakable(reply);
-    res.json({ reply, mode: OPENAI_KEY ? 'ai' : 'basic' });
+    res.json({ reply, mode: OPENAI_KEY && aiHealthy ? 'ai' : 'basic' });
   } catch (e) {
     console.error(e.message);
     res.status(502).json({ error: 'The assistant is unavailable right now. Please try again or contact the admin.' });
@@ -294,7 +311,7 @@ app.post('/api/chat', limiter, async (req, res) => {
 
 // Text-to-speech (OpenAI). Browser falls back to speechSynthesis when this 404s.
 app.post('/api/tts', limiter, async (req, res) => {
-  if (!OPENAI_KEY) return res.status(404).json({ error: 'tts disabled' });
+  if (!OPENAI_KEY || !TTS_ENABLED) return res.status(404).json({ error: 'tts disabled' });
   const text = speakable(String(req.body.text || '')).slice(0, 1200);
   const VOICES = ['alloy','ash','coral','echo','fable','nova','onyx','sage','shimmer'];
   const voice = VOICES.includes(req.body.voice) ? req.body.voice : TTS_VOICE;
@@ -321,7 +338,7 @@ app.post('/api/tts', limiter, async (req, res) => {
 
 // Speech-to-text (OpenAI) for browsers without built-in recognition (e.g. Firefox)
 app.post('/api/stt', limiter, upload.single('audio'), async (req, res) => {
-  if (!OPENAI_KEY) return res.status(404).json({ error: 'stt disabled' });
+  if (!OPENAI_KEY || !STT_MODEL) return res.status(404).json({ error: 'stt disabled' });
   if (!req.file) return res.status(400).json({ error: 'No audio' });
   try {
     const form = new FormData();
@@ -361,10 +378,10 @@ app.post('/api/escalate', limiter, async (req, res) => {
 });
 
 app.get('/api/config', (req, res) =>
-  res.json({ ai: !!OPENAI_KEY, tts: !!OPENAI_KEY, stt: !!OPENAI_KEY, site: SITE_URL, escalation: !!ESCALATION_WEBHOOK })
+  res.json({ ai: !!OPENAI_KEY && aiHealthy, provider: PROVIDER ? PROVIDER.name : null, tts: TTS_ENABLED, stt: !!(OPENAI_KEY && STT_MODEL), site: SITE_URL, escalation: !!ESCALATION_WEBHOOK })
 );
 app.get('/healthz', (req, res) => res.send('ok'));
 
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
-app.listen(PORT, () => console.log(`Ladybug support AI listening on :${PORT} (ai=${!!OPENAI_KEY})`));
+app.listen(PORT, () => console.log(`Ladybug AI listening on :${PORT} | provider=${PROVIDER ? PROVIDER.name + ' ' + CHAT_MODEL : 'none (basic mode)'}`));

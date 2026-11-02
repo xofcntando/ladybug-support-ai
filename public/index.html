@@ -364,7 +364,7 @@ applyS();
 /* init */
 const suggestions = ['How do I link my WhatsApp number?','How much does it cost?','My bot stopped responding','Is the platform online right now?','Help me write a bot command idea'];
 suggestions.forEach(s=>{ const c=document.createElement('button'); c.type='button'; c.className='chip'; c.textContent=s; c.onclick=()=>send(s); $('#chips').appendChild(c); });
-fetch('/api/config').then(r=>r.json()).then(c=>{ cfg=c; $('#adminLink').href = c.site + '/#/support'; $('#cloudLink').href = c.site; $('#statusLink').href = c.site + '/#/status'; if(!c.ai){ $('.chead small').innerHTML='<span class="dot" style="background:var(--warn)"></span> basic mode &middot; add an AI key for full intelligence'; } }).catch(()=>{});
+fetch('/api/config').then(r=>r.json()).then(c=>{ cfg=c; $('#adminLink').href = c.site + '/#/support'; $('#cloudLink').href = c.site; $('#statusLink').href = c.site + '/#/status'; if(!c.ai){ $('.chead small').innerHTML='<span class="dot" style="background:var(--warn)"></span> basic mode &middot; AI key missing or not working'; } else { $('.chead small').innerHTML='<span class="dot"></span> advanced mode &middot; by Ntandomods'; } }).catch(()=>{});
 add('assistant', "Hi, I'm **Ladybug AI**, the brain behind Ntandomods and Ladybug Cloud. Ask me about your bot, coins, pricing and payments, or anything else: code, ideas, research, maths. Tap **Call Ladybug AIbug AI** to talk by voice.");
 </script>
 </body>
