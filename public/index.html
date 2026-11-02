@@ -75,6 +75,18 @@ footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
 .hang{background:var(--bad);border-color:var(--bad);width:64px;height:64px;border-radius:50%;font-size:26px;justify-content:center;padding:0}
 .row{display:flex;gap:14px;align-items:center}
 select{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px}
+/* settings */
+#set{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:30;padding:16px}
+#set.on{display:flex}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;width:100%;max-width:460px;max-height:90vh;overflow:auto;padding:20px}
+.panel h3{font:800 20px 'Bricolage Grotesque';margin:0 0 4px}.panel .hint{color:var(--muted);font-size:13px;margin:0 0 14px}
+.fld{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}.fld label{font-size:13px;color:var(--muted);font-weight:600}
+.fld input[type=text],.fld select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;font:14px 'Instrument Sans';width:100%}
+.tog{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font-size:14px}
+.tog input{width:20px;height:20px;accent-color:var(--blue)}
+.sw{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sw button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer}.sw button.sel{border-color:#fff}
+.sw input[type=color]{width:34px;height:30px;border:0;background:none;padding:0}
+input[type=range]{accent-color:var(--blue)}
 /* embed: chat only */
 body.embed{background:var(--panel)}
 body.embed nav,body.embed .hero,body.embed section.sec,body.embed footer,body.embed .note{display:none}
@@ -107,8 +119,9 @@ body.embed .app{margin:0;max-width:none;height:100vh;border:0;border-radius:0;bo
   <div class="app" id="chat">
     <div class="chead">
       <img src="https://ladybugcloud.xubi.org/img/logo.png" alt="" />
-      <div><b>Ladybug AI</b><small><span class="dot"></span> online &middot; by Ntandomods</small></div>
+      <div><b id="botName">Ladybug AI</b><small><span class="dot"></span> online &middot; by Ntandomods</small></div>
       <div class="spacer"></div>
+      <button class="btn icon" id="setBtn" title="Customize">&#9881;</button>
       <button class="btn btn-primary" id="callBtn" title="Talk by voice">&#128222; Call</button>
     </div>
     <div id="log" aria-live="polite"></div>
@@ -133,6 +146,26 @@ body.embed .app{margin:0;max-width:none;height:100vh;border:0;border-radius:0;bo
 </div>
 </main>
 <footer><div class="wrap"><span>&copy; Ntandomods</span><a href="https://ladybugcloud.xubi.org" target="_blank" rel="noopener">Ladybug Cloud</a><a href="https://ladybugcloud.xubi.org/#/status" target="_blank" rel="noopener">Platform status</a><a href="https://ladybugcloud.xubi.org/#/support" target="_blank" rel="noopener">Contact admin</a></div></footer>
+
+<div id="set" role="dialog" aria-label="Customize"><div class="panel">
+  <h3>Customize</h3><p class="hint">Saved on this device.</p>
+  <div class="fld"><label>Assistant name</label><input type="text" id="sName" maxlength="24" /></div>
+  <div class="fld"><label>Personality</label><select id="sTone">
+    <option value="friendly">Friendly and warm</option><option value="casual">Casual, like a mate</option>
+    <option value="professional">Professional</option><option value="playful">Playful and witty</option><option value="calm">Calm and patient</option></select></div>
+  <div class="fld"><label>Reply length</label><select id="sLen">
+    <option value="short">Short and snappy</option><option value="normal">Balanced</option><option value="detailed">Detailed</option></select></div>
+  <div class="tog"><span>Use emoji in chat</span><input type="checkbox" id="sEmoji" /></div>
+  <div class="tog"><span>Show captions during voice calls</span><input type="checkbox" id="sCaps" /></div>
+  <div class="tog"><span>Read chat replies aloud</span><input type="checkbox" id="sAuto" /></div>
+  <div class="fld"><label>Voice</label><select id="sVoice">
+    <option value="coral">Coral (warm, female)</option><option value="nova">Nova (bright, female)</option><option value="shimmer">Shimmer (soft, female)</option>
+    <option value="sage">Sage (calm)</option><option value="alloy">Alloy (neutral)</option><option value="ash">Ash (male)</option>
+    <option value="echo">Echo (male)</option><option value="onyx">Onyx (deep, male)</option><option value="fable">Fable (storyteller)</option></select></div>
+  <div class="fld"><label>Speaking speed: <span id="sSpeedV"></span></label><input type="range" id="sSpeed" min="0.75" max="1.35" step="0.05" /></div>
+  <div class="fld"><label>Accent colour</label><div class="sw" id="sw"></div></div>
+  <div class="row" style="justify-content:space-between"><button class="btn" id="sReset" type="button">Reset</button><button class="btn btn-primary" id="sDone" type="button">Done</button></div>
+</div></div>
 
 <div id="call" role="dialog" aria-label="Voice call">
   <div class="orb" id="orb"></div>
@@ -159,6 +192,15 @@ const log = $('#log'), input = $('#input');
 let history = [];
 let cfg = { ai: false, tts: false, stt: false, site: 'https://ladybugcloud.xubi.org' };
 
+const DEF = {name:'Ladybug AI', tone:'friendly', length:'normal', emoji:false, captions:false, autoread:false, voice:'coral', speed:1, accent:'#2f6bff'};
+let S = Object.assign({}, DEF, JSON.parse(localStorage.getItem('lbai') || '{}'));
+function saveS(){ localStorage.setItem('lbai', JSON.stringify(S)); }
+function shade(hex, amt){ const n=parseInt(hex.slice(1),16); const f=(v)=>Math.max(0,Math.min(255,v+amt)); return '#'+[(n>>16)&255,(n>>8)&255,n&255].map(f).map(v=>v.toString(16).padStart(2,'0')).join(''); }
+function applyS(){
+  document.documentElement.style.setProperty('--blue', S.accent); document.documentElement.style.setProperty('--blue2', shade(S.accent, 40));
+  $('#botName').textContent = S.name; document.title = 'Ntandomods | ' + S.name;
+  $('#input').placeholder = 'Ask ' + S.name + ' anything...';
+}
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function md(s){return esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>').replace(/(https?:\/\/[^\s)<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');}
 function add(role, text){
@@ -168,7 +210,7 @@ function add(role, text){
 }
 async function ask(text, voice){
   history.push({role:'user', content:text});
-  const r = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history,voice:!!voice})});
+  const r = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history,voice:!!voice,style:{name:S.name,tone:S.tone,length:S.length,emoji:S.emoji}})});
   const j = await r.json();
   if(!r.ok) throw new Error(j.error || 'Request failed');
   history.push({role:'assistant', content:j.reply});
@@ -178,7 +220,7 @@ async function send(text){
   text = text.trim(); if(!text) return;
   add('user', text); input.value = '';
   const t = add('bot', '...'); t.classList.add('typing');
-  try { const reply = await ask(text,false); t.classList.remove('typing'); t.innerHTML = md(reply); }
+  try { const reply = await ask(text,false); t.classList.remove('typing'); t.innerHTML = md(reply); if(S.autoread && !inCall) speak(reply, $('#lang').value); }
   catch(e){ t.classList.remove('typing'); t.textContent = e.message; history.pop(); }
   log.scrollTop = log.scrollHeight;
 }
@@ -241,19 +283,20 @@ function speak(text, lang){
     cur.skip = ()=>{ try{cur.audio&&cur.audio.pause();}catch(e){} speechSynthesis.cancel(); end(); };
     try{
       if(cfg.tts){
-        const r = await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+        const r = await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voice:S.voice,speed:S.speed})});
         if(r.ok){ const url = URL.createObjectURL(await r.blob()); const a = new Audio(url); cur.audio = a; a.onended=end; a.onerror=end; await a.play(); return; }
       }
     }catch(e){}
     if(!('speechSynthesis' in window)) return end();
-    const u = new SpeechSynthesisUtterance(text.replace(/[*`#]/g,'')); u.lang = lang; u.onend = end; u.onerror = end;
+    const u = new SpeechSynthesisUtterance(text.replace(/[*`#]/g,'')); u.lang = lang; u.rate = S.speed; u.onend = end; u.onerror = end;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   });
 }
 
 /* ---------------- call mode ---------------- */
 let inCall = false, timerId = null, callStart = 0;
-const setState = (cls, label, text)=>{ $('#orb').className = 'orb ' + cls; $('#callState').textContent = label; if(text !== undefined) $('#callText').textContent = text; };
+const setState = (cls, label, text)=>{ $('#orb').className = 'orb ' + cls; $('#callState').textContent = label.replace('Ladybug AI', S.name); if(text !== undefined) $('#callText').textContent = S.captions ? text : ''; };
+const addCall = (role,text)=>{ if(S.captions) add(role,text); };
 async function startCall(){
   if(!SR && !(canRecord && cfg.stt)){ alert('Voice calls need Chrome, Edge or Safari (or the server must have speech-to-text enabled).'); return; }
   try{ const s = await navigator.mediaDevices.getUserMedia({audio:true}); s.getTracks().forEach(t=>t.stop()); }catch(e){ alert('Microphone permission is required for a voice call.'); return; }
@@ -261,22 +304,22 @@ async function startCall(){
   timerId = setInterval(()=>{ const s = Math.floor((Date.now()-callStart)/1000); $('#callTimer').textContent = String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); },500);
   const lang = $('#lang').value;
   setState('thinking','Connecting...','');
-  const greet = "Hi, you've reached Ladybug AI. I'm Ladybug AI from Ntandomods. How can I help you today?";
-  history.push({role:'assistant', content:greet}); add('assistant', greet);
+  const greet = "Hey, it's "+S.name+" from Ntandomods. What can I help you with?";
+  history.push({role:'assistant', content:greet}); addCall('assistant', greet);
   setState('speaking','Ladybug AI is speaking',greet); await speak(greet, lang);
   let silent = 0;
   while(inCall){
     setState('listening','Listening...','Go ahead, I\'m listening.');
-    const heard = await listen($('#lang').value, (t)=>{ $('#callText').textContent = t; });
+    const heard = await listen($('#lang').value, (t)=>{ if(S.captions) $('#callText').textContent = t; });
     if(!inCall) break;
     if(heard === null){ setState('thinking','Voice unavailable',''); break; }
     if(!heard.trim()){ if(++silent >= 4){ const bye = "I haven't heard anything, so I'll hang up now. Call again any time."; setState('speaking','Ladybug AI is speaking',bye); await speak(bye,$('#lang').value); break; } continue; }
     silent = 0;
-    add('user', heard); setState('thinking','Thinking...', heard);
+    addCall('user', heard); setState('thinking','Thinking...', heard);
     let reply;
     try{ reply = await ask(heard, true); }catch(e){ reply = "Sorry, I'm having trouble right now. Please try again or contact the admin."; history.pop(); }
     if(!inCall) break;
-    add('assistant', reply); setState('speaking','Ladybug AI is speaking', reply);
+    addCall('assistant', reply); setState('speaking','Ladybug AI is speaking', reply);
     await speak(reply, $('#lang').value);
   }
   endCall();
@@ -296,6 +339,19 @@ $('#micBtn').onclick = async ()=>{
   const t = await listen($('#lang').value, (x)=>{ input.value = x; });
   b.style.borderColor=''; if(t) { input.value = t; send(t); }
 };
+
+/* customization UI */
+const COLORS=['#2f6bff','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4'];
+function renderSw(){ const sw=$('#sw'); sw.innerHTML=''; COLORS.forEach(c=>{ const b=document.createElement('button'); b.type='button'; b.style.background=c; if(c===S.accent) b.className='sel'; b.onclick=()=>{S.accent=c; saveS(); applyS(); renderSw();}; sw.appendChild(b); });
+  const i=document.createElement('input'); i.type='color'; i.value=S.accent; i.oninput=()=>{S.accent=i.value; saveS(); applyS();}; sw.appendChild(i); }
+function fillSet(){ $('#sName').value=S.name; $('#sTone').value=S.tone; $('#sLen').value=S.length; $('#sEmoji').checked=S.emoji; $('#sCaps').checked=S.captions; $('#sAuto').checked=S.autoread; $('#sVoice').value=S.voice; $('#sSpeed').value=S.speed; $('#sSpeedV').textContent=S.speed+'x'; renderSw(); }
+$('#setBtn').onclick=()=>{ fillSet(); $('#set').classList.add('on'); };
+$('#sDone').onclick=()=>$('#set').classList.remove('on');
+$('#set').onclick=(e)=>{ if(e.target.id==='set') $('#set').classList.remove('on'); };
+$('#sReset').onclick=()=>{ S=Object.assign({},DEF); saveS(); applyS(); fillSet(); };
+[['sName','name',v=>v.trim()||DEF.name],['sTone','tone',v=>v],['sLen','length',v=>v],['sVoice','voice',v=>v],['sSpeed','speed',v=>parseFloat(v)]].forEach(([id,k,f])=>{ $('#'+id).oninput=(e)=>{ S[k]=f(e.target.value); if(id==='sSpeed') $('#sSpeedV').textContent=S.speed+'x'; saveS(); applyS(); }; });
+[['sEmoji','emoji'],['sCaps','captions'],['sAuto','autoread']].forEach(([id,k])=>{ $('#'+id).onchange=(e)=>{ S[k]=e.target.checked; saveS(); }; });
+applyS();
 
 /* init */
 const suggestions = ['How do I link my WhatsApp number?','How much does it cost?','My bot stopped responding','Is the platform online right now?','Help me write a bot command idea'];

@@ -77,7 +77,24 @@ async function liveData() {
   return text;
 }
 
-const SYSTEM = (live, voice) => `You are "Ladybug AI", the intelligent assistant of Ntandomods (the brand of Ntando) and the face of Ladybug Cloud (${SITE_URL}), the WhatsApp bot hosting platform that runs the "Ladybug Mini" bot.
+const TONES = {
+  friendly: 'warm, upbeat and caring, like a friendly colleague who is glad to help',
+  casual: 'relaxed and casual, like a clever mate texting back; light slang is fine, never rude',
+  professional: 'polished and professional, courteous but still natural and never stiff',
+  playful: 'playful and witty with light humour, but always useful first',
+  calm: 'calm, patient and reassuring, especially good with stressed or confused people',
+};
+const LENGTHS = { short: 'Keep replies very short: usually 1 to 2 sentences.', normal: 'Keep replies compact: a few sentences unless the problem needs more.', detailed: 'Give thorough, well-organised answers when helpful.' };
+function cleanStyle(st) {
+  st = st && typeof st === 'object' ? st : {};
+  return {
+    name: String(st.name || 'Ladybug AI').replace(/[^\p{L}\p{N} _.-]/gu, '').slice(0, 24) || 'Ladybug AI',
+    tone: TONES[st.tone] ? st.tone : 'friendly',
+    length: LENGTHS[st.length] ? st.length : 'normal',
+    emoji: !!st.emoji,
+  };
+}
+const SYSTEM = (live, voice, st = cleanStyle()) => `You are "${st.name}", the intelligent assistant of Ntandomods, the intelligent assistant of Ntandomods (the brand of Ntando) and the face of Ladybug Cloud (${SITE_URL}), the WhatsApp bot hosting platform that runs the "Ladybug Mini" bot.
 
 WHO YOU ARE
 You are a sharp, general-purpose thinking partner AND the dedicated support brain for Ladybug Cloud and Ntandomods. You can help with anything: coding, WhatsApp bots, hosting, business, maths, writing, research, troubleshooting, ideas. But your home turf and your loyalty are Ladybug Cloud, Ladybug Mini and Ntandomods. When a question touches them, the knowledge base and live data below are the source of truth.
@@ -94,9 +111,17 @@ HONESTY AND LIMITS (important)
 - Do not help with spamming, ban evasion, account takeover, or harming others. Keep WhatsApp rules in mind.
 - Never promise refunds, approvals, or response times.
 
+HOW YOU TALK (very important)
+- Talk like a real person, not a manual. Personality: ${TONES[st.tone]}. ${LENGTHS[st.length]}
+- Use contractions ("you're", "it's", "I'll"). Vary your sentences. React first when it fits ("Ah, that's annoying", "Nice, easy fix", "Hmm, let me check"), then help.
+- Never open with "Certainly", "Absolutely", "Great question" or "As an AI". Don't repeat the question back. Don't lecture or dump everything you know.
+- Ask at most one short follow-up question, and only when you really need it. Remember what was said earlier in the chat and refer back to it naturally.
+- If you're unsure, say so the way a person would ("I'm not 100% sure, but..."). If the user is frustrated, acknowledge it briefly first.
+- ${st.emoji ? 'An occasional emoji is fine.' : 'Do not use emoji.'}
+
 STYLE
-- Warm, confident, concise. Reply in the user's language. Use the user's own situation (20 coins per day, 140 coin cap, 7 day trial) in examples.
-${voice ? '- This is a VOICE CALL. Speak naturally in 1 to 4 short sentences. No markdown, no lists, no URLs read out letter by letter, no emoji. Offer to continue.' : '- Light markdown is fine. Keep answers focused; go longer only when the problem needs it.'}
+- Confident and concise. Reply in the user's language. Use the user's own situation (20 coins per day, 140 coin cap, 7 day trial) in examples.
+${voice ? '- This is a LIVE VOICE CALL, so write exactly what you would say out loud: 1 to 3 short, natural sentences, spoken-style, with the odd "yeah", "okay", "right". No markdown, no lists, no emoji, no URLs read out; say "I will put the link in the chat" instead. Numbers spoken naturally ("twenty coins a day").' : '- Light markdown is fine. Keep answers focused; go longer only when the problem needs it.'}
 
 ${live}
 
@@ -179,15 +204,15 @@ async function runTool(name, args) {
 }
 
 const REASONING = /^(o\d|gpt-5)/.test(CHAT_MODEL);
-async function chat(messages, voice) {
+async function chat(messages, voice, st) {
   const live = await liveData();
   const last = [...messages].reverse().find((m) => m.role === 'user');
   if (!OPENAI_KEY) return fallbackAnswer(last ? last.content : '');
-  const convo = [{ role: REASONING ? 'developer' : 'system', content: SYSTEM(live, voice) }, ...messages];
+  const convo = [{ role: REASONING ? 'developer' : 'system', content: SYSTEM(live, voice, st) }, ...messages];
   for (let step = 0; step < 5; step++) {
     const body = { model: CHAT_MODEL, messages: convo, tools: TOOLS };
     if (REASONING) { body.max_completion_tokens = voice ? 2500 : 6000; body.reasoning_effort = voice ? 'low' : 'medium'; }
-    else { body.temperature = 0.4; body.max_tokens = voice ? 300 : 1200; }
+    else { body.temperature = 0.7; body.max_tokens = voice ? 300 : 1200; }
     if (step === 4) body.tool_choice = 'none';
     const r = await fetch(`${OPENAI_BASE}/chat/completions`, {
       method: 'POST',
@@ -220,7 +245,7 @@ app.post('/api/chat', limiter, async (req, res) => {
   try {
     const messages = cleanMessages(req.body.messages);
     if (!messages.length) return res.status(400).json({ error: 'No messages' });
-    const reply = await chat(messages, !!req.body.voice);
+    const reply = await chat(messages, !!req.body.voice, cleanStyle(req.body.style));
     res.json({ reply, mode: OPENAI_KEY ? 'ai' : 'basic' });
   } catch (e) {
     console.error(e.message);
@@ -232,12 +257,19 @@ app.post('/api/chat', limiter, async (req, res) => {
 app.post('/api/tts', limiter, async (req, res) => {
   if (!OPENAI_KEY) return res.status(404).json({ error: 'tts disabled' });
   const text = String(req.body.text || '').slice(0, 1200);
+  const VOICES = ['alloy','ash','coral','echo','fable','nova','onyx','sage','shimmer'];
+  const voice = VOICES.includes(req.body.voice) ? req.body.voice : TTS_VOICE;
+  const speed = Math.min(1.35, Math.max(0.7, parseFloat(req.body.speed) || 1));
   if (!text) return res.status(400).json({ error: 'No text' });
   try {
     const r = await fetch(`${OPENAI_BASE}/audio/speech`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
-      body: JSON.stringify({ model: TTS_MODEL, voice: TTS_VOICE, input: text, response_format: 'mp3' }),
+      body: JSON.stringify(
+        TTS_MODEL.startsWith('gpt-4o')
+          ? { model: TTS_MODEL, voice, input: text, response_format: 'mp3', instructions: `Speak like a real, friendly person in a relaxed phone conversation: natural rhythm, light emotion, small pauses, not like a news reader or a script. ${speed > 1.1 ? 'Speak a little faster than normal.' : speed < 0.9 ? 'Speak slowly and gently.' : ''}` }
+          : { model: TTS_MODEL, voice, input: text, response_format: 'mp3', speed }
+      ),
       signal: AbortSignal.timeout(30000),
     });
     if (!r.ok) return res.status(502).json({ error: 'tts failed' });
