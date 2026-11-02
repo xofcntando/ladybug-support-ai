@@ -1,5 +1,7 @@
 # Ladybug AIbug Cloud Support AI ("Ladybug AIbug AI")
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/xofcntando/ladybug-support-ai)
+
 Text + voice-call support assistant for https://ladybugcloud.xubi.org. Answers from `knowledge.md` plus live prices/status pulled from the platform.
 
 ## Deploy on Render
@@ -20,3 +22,6 @@ Add before `</body>`: `<script src="https://YOUR-SERVICE.onrender.com/widget.js"
 OPENAI_API_KEY, OPENAI_MODEL (gpt-4o; o-series/gpt-5 reasoning models also work), OPENAI_TTS_VOICE (coral), SITE_URL, ALLOWED_ORIGINS, ESCALATION_WEBHOOK_URL (Discord/Slack), RATE_LIMIT_PER_MIN.
 
 Edit `knowledge.md` to change what Ladybug AI knows. Free Render plan sleeps after 15 min idle (first request is slow); use Starter ($7) for a snappy call experience.
+
+## Free AI without OpenAI
+Any OpenAI-compatible provider works. Example (Groq, free tier): OPENAI_BASE_URL=https://api.groq.com/openai/v1, OPENAI_MODEL=llama-3.3-70b-versatile, OPENAI_API_KEY=<groq key>. Voice then uses the browser's built-in speech.
