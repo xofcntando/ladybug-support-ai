@@ -16,7 +16,7 @@ const PROVIDERS = [
 const PROVIDER = PROVIDERS.find((p) => (process.env[p.env] || '').trim().length > 10) || null;
 const OPENAI_KEY = PROVIDER ? process.env[PROVIDER.env].trim() : '';
 const OPENAI_BASE = (process.env.OPENAI_BASE_URL || (PROVIDER && PROVIDER.base) || '').replace(/\/$/, '');
-const CHAT_MODEL = process.env.OPENAI_MODEL || (PROVIDER && PROVIDER.model) || 'gpt-4o';
+const CHAT_MODEL = process.env.CHAT_MODEL || ((PROVIDER && PROVIDER.name === 'openai') || process.env.OPENAI_BASE_URL ? process.env.OPENAI_MODEL : '') || (PROVIDER && PROVIDER.model) || 'gpt-4o';
 const TTS_ENABLED = !!(PROVIDER && PROVIDER.tts);
 const STT_MODEL = process.env.OPENAI_STT_MODEL || (PROVIDER && PROVIDER.stt) || '';
 const TTS_MODEL = process.env.OPENAI_TTS_MODEL || 'gpt-4o-mini-tts';
